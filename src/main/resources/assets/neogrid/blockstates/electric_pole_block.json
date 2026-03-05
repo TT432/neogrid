@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "half=lower": {
+      "model": "neogrid:block/electric_pole_lower"
+    },
+    "half=upper": {
+      "model": "neogrid:block/electric_pole_upper"
+    }
+  }
+}
