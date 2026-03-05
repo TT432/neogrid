@@ -82,46 +82,9 @@ public class NeoGrid {
         // Do not add this line if there are no @SubscribeEvent-annotated functions in this class, like onServerStarting() below.
         NeoForge.EVENT_BUS.register(this);
 
-        modEventBus.addListener(this::registerCapabilities);
-
-        final MutableTestFramework framework = FrameworkConfiguration.builder(ResourceLocation.fromNamespaceAndPath(MOD_ID, "tests"))
-                .clientConfiguration(() -> ClientConfiguration.builder()
-                        .toggleOverlayKey(GLFW.GLFW_KEY_J)
-                        .openManagerKey(GLFW.GLFW_KEY_N)
-                        .build())
-                .build().create();
-
-        framework.init(modEventBus, modContainer);
-
-        NeoForge.EVENT_BUS.addListener((final RegisterCommandsEvent event) -> {
-            final LiteralArgumentBuilder<CommandSourceStack> node = Commands.literal("tests");
-            framework.registerCommands(node);
-            event.getDispatcher().register(node);
-        });
-
         if (FMLEnvironment.dist == Dist.CLIENT) {
             modEventBus.register(ClientModEvents.class);
         }
-    }
-
-    @OnInit
-    public static void onFrameworkInit(MutableTestFramework framework) {
-        LOGGER.info("Test Framework Initialized for NeoGrid");
-    }
-
-    private void registerCapabilities(RegisterCapabilitiesEvent event) {
-        // Electric Pole no longer has internal storage
-
-        // Mock energy storage for IRON_BLOCK, used only in ElectricPoleTest
-        event.registerBlock(Capabilities.EnergyStorage.BLOCK, (level, pos, state, be, context) -> {
-            if (level.isClientSide) return null;
-            try {
-                // Use reflection or just direct access if possible
-                return io.github.tt432.neogrid.test.ElectricPoleTest.getTestEnergy(pos);
-            } catch (NoClassDefFoundError | Exception e) {
-                return null;
-            }
-        }, Blocks.IRON_BLOCK);
     }
 
     @SubscribeEvent
