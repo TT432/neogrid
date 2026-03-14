@@ -1,6 +1,7 @@
 package io.github.tt432.neogrid.block.entity;
 
 import io.github.tt432.neogrid.NeoGrid;
+import io.github.tt432.neogrid.block.ElectricPoleBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -14,6 +15,7 @@ import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.energy.EnergyStorage;
@@ -30,7 +32,31 @@ public class ElectricPoleBlockEntity extends BlockEntity {
     private static final int MAX_TRANSFER_RATE = 1000;
 
     public ElectricPoleBlockEntity(BlockPos pos, BlockState blockState) {
-        super(NeoGrid.ELECTRIC_POLE_BLOCK_ENTITY.get(), pos, blockState);
+        this(NeoGrid.ELECTRIC_POLE_BLOCK_ENTITY.get(), pos, blockState);
+    }
+
+    public ElectricPoleBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState blockState) {
+        super(type, pos, blockState);
+    }
+
+    /**
+     * Gets the max transfer rate from the block instance, falling back to default.
+     */
+    public int getMaxTransferRate() {
+        if (getBlockState().getBlock() instanceof ElectricPoleBlock pole) {
+            return pole.getMaxTransferRate();
+        }
+        return MAX_TRANSFER_RATE;
+    }
+
+    /**
+     * Gets the connection range from the block instance, falling back to default.
+     */
+    public int getConnectionRange() {
+        if (getBlockState().getBlock() instanceof ElectricPoleBlock pole) {
+            return pole.getConnectionRange();
+        }
+        return 10;
     }
 
     public List<BlockPos> getConnectedBlocks() {
@@ -105,7 +131,7 @@ public class ElectricPoleBlockEntity extends BlockEntity {
     }
 
     private static void scanConnections(Level level, BlockPos pos, ElectricPoleBlockEntity blockEntity) {
-        int radius = 10;
+        int radius = blockEntity.getConnectionRange();
         List<BlockPos> newConnections = new ArrayList<>();
 
         // Optimization: Only scan if level is not null and we are on server side
@@ -222,8 +248,10 @@ public class ElectricPoleBlockEntity extends BlockEntity {
         if (receivers.isEmpty() || providers.isEmpty()) return;
 
         // 5. Execute direct transfer from providers to receivers
+        // Use the leader pole's transfer rate as the network rate
+        int transferRate = blockEntity.getMaxTransferRate();
         for (EnergyHandlerAtPos provider : providers) {
-            int toExtract = provider.handler.extractEnergy(MAX_TRANSFER_RATE, true);
+            int toExtract = provider.handler.extractEnergy(transferRate, true);
             if (toExtract <= 0) continue;
 
             // Distribute energy to all receivers except those at the same position as the provider

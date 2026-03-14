@@ -2,6 +2,7 @@ package io.github.tt432.neogrid.block;
 
 import io.github.tt432.neogrid.NeoGrid;
 import io.github.tt432.neogrid.block.entity.ElectricPoleBlockEntity;
+import io.github.tt432.neogrid.block.entity.ElectricPoleBlockEntityTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.entity.LivingEntity;
@@ -27,9 +28,44 @@ import org.jetbrains.annotations.Nullable;
 public class ElectricPoleBlock extends Block implements EntityBlock {
     public static final EnumProperty<DoubleBlockHalf> HALF = BlockStateProperties.DOUBLE_BLOCK_HALF;
 
+    private final int maxTransferRate;
+    private final int connectionRange;
+    private final float wireColorR;
+    private final float wireColorG;
+    private final float wireColorB;
+
     public ElectricPoleBlock(Properties properties) {
+        this(properties, 1000, 10, 0.0F, 0.5F, 1.0F);
+    }
+
+    public ElectricPoleBlock(Properties properties, int maxTransferRate, int connectionRange, float wireColorR, float wireColorG, float wireColorB) {
         super(properties);
+        this.maxTransferRate = maxTransferRate;
+        this.connectionRange = connectionRange;
+        this.wireColorR = wireColorR;
+        this.wireColorG = wireColorG;
+        this.wireColorB = wireColorB;
         this.registerDefaultState(this.stateDefinition.any().setValue(HALF, DoubleBlockHalf.LOWER));
+    }
+
+    public int getMaxTransferRate() {
+        return maxTransferRate;
+    }
+
+    public int getConnectionRange() {
+        return connectionRange;
+    }
+
+    public float getWireColorR() {
+        return wireColorR;
+    }
+
+    public float getWireColorG() {
+        return wireColorG;
+    }
+
+    public float getWireColorB() {
+        return wireColorB;
     }
 
     @Override
@@ -101,14 +137,26 @@ public class ElectricPoleBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return state.getValue(HALF) == DoubleBlockHalf.LOWER ? new ElectricPoleBlockEntity(pos, state) : null;
+        if (state.getValue(HALF) != DoubleBlockHalf.LOWER) return null;
+        // Look up the BlockEntityType for this specific block variant
+        var type = ElectricPoleBlockEntityTypes.getType(this);
+        if (type != null) {
+            return new ElectricPoleBlockEntity(type, pos, state);
+        }
+        // Fallback to the default type (for the vanilla neogrid pole)
+        return new ElectricPoleBlockEntity(pos, state);
     }
 
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
         if (state.getValue(HALF) != DoubleBlockHalf.LOWER) return null;
-        if (blockEntityType != NeoGrid.ELECTRIC_POLE_BLOCK_ENTITY.get()) return null;
+        // Accept any registered ElectricPoleBlockEntity type
+        var expectedType = ElectricPoleBlockEntityTypes.getType(this);
+        if (expectedType == null) {
+            expectedType = NeoGrid.ELECTRIC_POLE_BLOCK_ENTITY.get();
+        }
+        if (blockEntityType != expectedType) return null;
         return (lvl, pos, st, be) -> ElectricPoleBlockEntity.tick(lvl, pos, st, (ElectricPoleBlockEntity) be);
     }
 }

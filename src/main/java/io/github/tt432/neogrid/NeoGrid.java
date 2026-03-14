@@ -4,6 +4,7 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.logging.LogUtils;
 import io.github.tt432.neogrid.block.ElectricPoleBlock;
 import io.github.tt432.neogrid.block.entity.ElectricPoleBlockEntity;
+import io.github.tt432.neogrid.block.entity.ElectricPoleBlockEntityTypes;
 import io.github.tt432.neogrid.client.ClientModEvents;
 import io.github.tt432.neogrid.client.renderer.ElectricPoleBlockEntityRenderer;
 import net.minecraft.commands.CommandSourceStack;
@@ -60,7 +61,12 @@ public class NeoGrid {
 
     public static final DeferredBlock<ElectricPoleBlock> ELECTRIC_POLE_BLOCK = BLOCKS.register("electric_pole_block", () -> new ElectricPoleBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).noOcclusion().strength(2.0f)));
     public static final DeferredItem<BlockItem> ELECTRIC_POLE_BLOCK_ITEM = ITEMS.registerSimpleBlockItem("electric_pole_block", ELECTRIC_POLE_BLOCK);
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ElectricPoleBlockEntity>> ELECTRIC_POLE_BLOCK_ENTITY = BLOCK_ENTITY_TYPES.register("electric_pole_block_entity", () -> BlockEntityType.Builder.of(ElectricPoleBlockEntity::new, ELECTRIC_POLE_BLOCK.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ElectricPoleBlockEntity>> ELECTRIC_POLE_BLOCK_ENTITY = BLOCK_ENTITY_TYPES.register("electric_pole_block_entity", () -> {
+        var type = BlockEntityType.Builder.of(ElectricPoleBlockEntity::new, ELECTRIC_POLE_BLOCK.get()).build(null);
+        // Register the default pole's BlockEntityType in the global lookup
+        ElectricPoleBlockEntityTypes.register(ELECTRIC_POLE_BLOCK.get(), type);
+        return type;
+    });
 
     // Creates a creative tab with the id "neogrid:example_tab" for the example item, that is placed after the combat tab
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> EXAMPLE_TAB = CREATIVE_MODE_TABS.register("neogrid_group", () -> CreativeModeTab.builder().title(Component.translatable("itemGroup.neogrid")).icon(() -> ELECTRIC_POLE_BLOCK_ITEM.get().getDefaultInstance()).displayItems((parameters, output) -> {

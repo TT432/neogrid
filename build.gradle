@@ -3,6 +3,7 @@ plugins {
     id 'maven-publish'
     id 'idea'
     id 'net.neoforged.moddev' version '2.0.140'
+    id "me.modmuss50.mod-publish-plugin" version "1.1.0"
 }
 
 version = mod_version
@@ -105,12 +106,33 @@ repositories {
     }
 }
 
+repositories {
+    maven {
+        url "https://maven.latvian.dev/releases"
+        content {
+            includeGroup "dev.latvian.mods"
+            includeGroup "dev.latvian.apps"
+        }
+    }
+
+    maven {
+        url 'https://jitpack.io'
+        content {
+            includeGroup "com.github.rtyley"
+        }
+    }
+}
+
 dependencies {
     implementation "maven.modrinth:mekanism:10.7.18.84"
     implementation "maven.modrinth:mekanism-generators:10.7.18.84"
     implementation "net.neoforged:testframework:${project.neo_version}"
     testImplementation 'org.junit.jupiter:junit-jupiter:5.7.1'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    var kubejs_version = "2101.7.2-build.1"
+    api("dev.latvian.mods:kubejs-neoforge:$kubejs_version")
+    interfaceInjectionData("dev.latvian.mods:kubejs-neoforge:$kubejs_version") // optional
 }
 
 test {
@@ -163,4 +185,40 @@ idea {
         downloadSources = true
         downloadJavadoc = true
     }
+}
+
+publishMods {
+    file = jar.archiveFile
+    changelog = "Changelog not provided."
+    type = STABLE
+    modLoaders.add("neoforge")
+    displayName = "${mod_name} v${mod_version} for ${minecraft_version}"
+    dryRun = !providers.gradleProperty("CURSE_TOKEN").isPresent()
+            && !providers.environmentVariable("CURSE_TOKEN").isPresent()
+
+    curseforge {
+        projectId = "1481665"
+        projectSlug = "neogrid"
+        accessToken = providers.gradleProperty("CURSE_TOKEN")
+                .orElse(providers.environmentVariable("CURSE_TOKEN"))
+        minecraftVersions.add("${minecraft_version}")
+        requires("kubejs")
+    }
+
+    // Uncomment and fill in projectId when ready to publish to Modrinth
+    //modrinth {
+    //    projectId = "your_modrinth_id"
+    //    accessToken = providers.gradleProperty("MODRINTH_TOKEN")
+    //            .orElse(providers.environmentVariable("MODRINTH_TOKEN"))
+    //    minecraftVersions.add("${minecraft_version}")
+    //    requires("kubejs")
+    //}
+
+    // Uncomment and fill in repository when ready to publish to GitHub
+    //github {
+    //    repository = "username/neogrid"
+    //    accessToken = providers.gradleProperty("GITHUB_TOKEN")
+    //            .orElse(providers.environmentVariable("GITHUB_TOKEN"))
+    //    commitish = "main"
+    //}
 }

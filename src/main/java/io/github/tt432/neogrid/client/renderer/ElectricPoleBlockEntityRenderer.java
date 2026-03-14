@@ -2,6 +2,7 @@ package io.github.tt432.neogrid.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import io.github.tt432.neogrid.block.ElectricPoleBlock;
 import io.github.tt432.neogrid.block.entity.ElectricPoleBlockEntity;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -25,22 +26,25 @@ public class ElectricPoleBlockEntityRenderer implements BlockEntityRenderer<Elec
         List<BlockPos> connections = blockEntity.getConnectedBlocks();
         
         BlockPos pos = blockEntity.getBlockPos();
-        // Top of the pole (relative to the BE which is at the bottom half)
-        // Pole is 2 blocks high, so top is at y=1.5
         Vec3 startPos = new Vec3(0.5, 1.8, 0.5);
 
         PoseStack.Pose lastPose = poseStack.last();
         Matrix4f matrix = lastPose.pose();
 
+        // Read wire color from the block
+        float wireR = 0.0F, wireG = 0.5F, wireB = 1.0F;
+        if (blockEntity.getBlockState().getBlock() instanceof ElectricPoleBlock pole) {
+            wireR = pole.getWireColorR();
+            wireG = pole.getWireColorG();
+            wireB = pole.getWireColorB();
+        }
+
         for (BlockPos target : connections) {
             VertexConsumer consumer = bufferSource.getBuffer(RenderType.leash());
             
-            // Calculate target position relative to the BE
             Vec3 targetVec = new Vec3(target.getX(), target.getY(), target.getZ());
             Vec3 beVec = new Vec3(pos.getX(), pos.getY(), pos.getZ());
             
-            // If the target is another pole, we should connect to its TOP (y=1.5 relative to its bottom)
-            // Otherwise (e.g. a machine), we connect to its center (y=0.5)
             double targetYOffset = 0.5;
             if (blockEntity.getLevel().getBlockEntity(target) instanceof ElectricPoleBlockEntity) {
                 targetYOffset = 1.8;
@@ -52,16 +56,11 @@ public class ElectricPoleBlockEntityRenderer implements BlockEntityRenderer<Elec
             float yDiff = (float) (endPos.y - startPos.y);
             float zDiff = (float) (endPos.z - startPos.z);
             
-            // Sky-blue color: R=0.5, G=0.8, B=1.0
-            // Full brightness: LightTexture.FULL_BRIGHT
-            renderLine(consumer, matrix, startPos, xDiff, yDiff, zDiff, LightTexture.FULL_BRIGHT);
+            renderLine(consumer, matrix, startPos, xDiff, yDiff, zDiff, LightTexture.FULL_BRIGHT, wireR, wireG, wireB);
         }
     }
 
-    private void renderLine(VertexConsumer buffer, Matrix4f pose, Vec3 startPos, float dx, float dy, float dz, int light) {
-        float r = 0.0F;
-        float g = 0.5F;
-        float b = 1.0F;
+    private void renderLine(VertexConsumer buffer, Matrix4f pose, Vec3 startPos, float dx, float dy, float dz, int light, float r, float g, float b) {
         float width = 0.04F;
 
         float xzLenSq = dx * dx + dz * dz;
@@ -80,7 +79,6 @@ public class ElectricPoleBlockEntityRenderer implements BlockEntityRenderer<Elec
         float sY = (float) startPos.y;
         float sZ = (float) startPos.z;
 
-        // Render a 4-sided beam (blocky wire)
         // Top Face
         buffer.addVertex(pose, sX - perpX, sY + width, sZ + perpZ).setColor(r, g, b, 1.0F).setLight(light);
         buffer.addVertex(pose, sX + perpX, sY + width, sZ - perpZ).setColor(r, g, b, 1.0F).setLight(light);
@@ -113,6 +111,6 @@ public class ElectricPoleBlockEntityRenderer implements BlockEntityRenderer<Elec
 
     @Override
     public AABB getRenderBoundingBox(ElectricPoleBlockEntity blockEntity) {
-        return new AABB(blockEntity.getBlockPos()).inflate(11);
+        return new AABB(blockEntity.getBlockPos()).inflate(blockEntity.getConnectionRange() + 1);
     }
 }
